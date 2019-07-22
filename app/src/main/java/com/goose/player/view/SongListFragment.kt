@@ -6,8 +6,9 @@ import android.support.v7.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.goose.player.MediaPlayerController
 import com.goose.player.R
-import com.goose.player.RecycleTouchListener
+import com.goose.player.adapter.RecycleTouchListener
 import com.goose.player.adapter.SongsListAdapter
 import com.goose.player.entity.Song
 import com.goose.player.extensions.toast
@@ -16,7 +17,8 @@ import com.goose.player.utils.FileHelper.getAllAudioFromDevice
 import kotlinx.android.synthetic.main.fragment_song_list.*
 
 class SongListFragment : Fragment(), ClickListener {
-    var songsList = ArrayList<Song>()
+    private var songsList = ArrayList<Song>()
+    private var playerController: MediaPlayerController? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_song_list, container, false)
@@ -46,15 +48,17 @@ class SongListFragment : Fragment(), ClickListener {
     }
 
     private fun showPlayerAndPlaySong(song: Song) {
-        //todo add listener
-        with(activity as MainActivity){
-            showPlayer()
-            stopSong()
-            playSong(song)
+        (activity as MainActivity).showPlayer()
+        with(playerController!!){
+            playNewSong(song)
         }
     }
 
     override fun onLongClick(view: View, position: Int) {
         toast(position.toString() + position.toString())
+    }
+
+    fun setMediaController(controller: MediaPlayerController){
+        playerController = controller
     }
 }

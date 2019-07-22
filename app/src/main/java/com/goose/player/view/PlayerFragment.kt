@@ -2,9 +2,7 @@ package com.goose.player.view
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.media.MediaPlayer
-import android.net.Uri
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.Fragment
@@ -13,20 +11,26 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.SeekBar
+import com.goose.player.MediaPlayerController
 import com.goose.player.R
 import com.goose.player.entity.Song
+import com.goose.player.extensions.setGone
+import com.goose.player.extensions.setVisible
 import com.goose.player.extensions.toast
+import com.goose.player.interfaces.SongStateListener
 import com.goose.player.utils.FileHelper.getAllAudioFromDevice
 import kotlinx.android.synthetic.main.fragment_player.*
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-class PlayerFragment : Fragment(), SeekBar.OnSeekBarChangeListener, View.OnClickListener {
+class PlayerFragment : Fragment(), SeekBar.OnSeekBarChangeListener, View.OnClickListener, SongStateListener {
 
-    private val REQUEST_GET_MEDIA = 1
-    private val REQUEST_READ_PERMISSIONS = 2
+    private val REQUEST_READ_PERMISSIONS = 1
     private var songList = ArrayList<Song>()
-    private lateinit var mediaPlayer: MediaPlayer
+    private var mediaController: MediaPlayerController? = null
+    private lateinit var pauseIc: Drawable
+    private lateinit var playIc: Drawable
+    private var actualSong: Song? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_player, container, false)
@@ -35,15 +39,12 @@ class PlayerFragment : Fragment(), SeekBar.OnSeekBarChangeListener, View.OnClick
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         musicDurationSeekBar.setOnSeekBarChangeListener(this)
-        initMediaPlayer()
         checkPermissions()
         musicStateBtn.setOnClickListener(this)
-    }
-
-    private fun initMediaPlayer() {
-        mediaPlayer = MediaPlayer().apply {
-            setAudioStreamType(AudioManager.STREAM_MUSIC)
-        }
+        mediaController?.setListener(this)
+        pauseIc = resources.getDrawable(R.drawable.ic_pause_btn, null)
+        playIc = resources.getDrawable(R.drawable.ic_play_button, null)
+        showSongListBtn.setOnClickListener(this)
     }
 
     private fun checkPermissions() {
@@ -62,89 +63,70 @@ class PlayerFragment : Fragment(), SeekBar.OnSeekBarChangeListener, View.OnClick
         }
     }
 
-    fun playSong(song: Song) {
-        val uri = Uri.parse(song.path)
-        mediaPlayer.apply {
-            setDataSource(context!!, uri)
-            prepare()
-            start()
-        }
-        setSongDetails(song)
-    }
-
-    private fun setSongDetails(song: Song) {
-        artist.text = song.artist
-        songName.text = song.name
-        val hours = song.hours
-        var minutes = song.minutes
-        var seconds = song.seconds
-
-        if (song.minutes.toInt() < 10){
-            minutes = "0" + song.minutes
-        }
-        if (song.seconds.toInt() < 10){
-            seconds = "0" + song.seconds
-        }
-
-        songDuration.text = "$hours:$minutes:$seconds"
-    }
-
-    private fun resumeSong(){
-        mediaPlayer.start()
-    }
-
-    private fun pauseSong(){
-        mediaPlayer.pause()
-    }
-
-    fun stopSong(){
-        mediaPlayer.stop()
-    }
-
     override fun onClick(v: View) {
         when(v){
-            musicStateBtn -> {
-                musicStateAction()
-            }
+            musicStateBtn -> musicStateAction()
+            showSongListBtn -> showSongList()
         }
+    }
+
+    private fun showSongList() {
+        (activity as MainActivity).showSongsList()
     }
 
     private fun musicStateAction() {
-        val pauseIc = resources.getDrawable(R.drawable.ic_pause_btn, null)
-        val playIc = resources.getDrawable(R.drawable.ic_play_button, null)
-        if (mediaPlayer.isPlaying){
-            musicStateBtn.background = playIc
-            pauseSong()
-        }else if (!mediaPlayer.isPlaying){
+        if (mediaController!!.isPlaying()){
             musicStateBtn.background = pauseIc
-            resumeSong()
-        }else{
-
+            mediaController!!.pause()
+        }else if (!mediaController!!.isPlaying()){
+            musicStateBtn.background = playIc
+            mediaController!!.play()
         }
     }
 
     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-        val x = ceil(progress / 1000f).toInt()
-
-        if (x < 10)
-            durationText.text = "0:0$x"
-        else
-            durationText.text = "0:$x"
-
-        val percent = progress / seekBar.max.toDouble()
-        val offset = seekBar.thumbOffset
-        val seekWidth = seekBar.width
-        val dontKnowWhatIsThis = (percent * (seekWidth - 2 * offset)).roundToInt()
-        val labelWidth = durationText.width
-        durationText.x = (offset + seekBar.x + dontKnowWhatIsThis - (percent * offset).roundToInt()
-                - (percent * labelWidth / 2).roundToInt())
-
+        if (actualSong != null) {
+            formatSeekBarDurationHint(progress)?.let { setSongHintText(it) }
+            val percent = progress / seekBar.max.toDouble()
+            val offset = seekBar.thumbOffset
+            val seekWidth = seekBar.width
+            val dontKnowWhatIsThis = (percent * (seekWidth - 2 * offset)).roundToInt()
+            val labelWidth = durationText.width
+            durationText.x = (offset + seekBar.x + dontKnowWhatIsThis - (percent * offset).roundToInt()
+                    - (percent * labelWidth / 2).roundToInt())
+        }
     }
 
-    override fun onStartTrackingTouch(seekBar: SeekBar?) {
+    override fun onStartTrackingTouch(seekBar: SeekBar) {
+        durationText.setVisible()
+        seekBar.isClickable = actualSong == null
     }
 
-    override fun onStopTrackingTouch(seekBar: SeekBar?) {
+    private fun formatSeekBarDurationHint(seekBarTouchProgress: Int): String? {
+        if (actualSong != null && seekBarTouchProgress != 0){
+            val duration = ceil(actualSong!!.duration * (seekBarTouchProgress.toDouble() / 10))
+            val hours = (duration / 1000 / 60 / 60).roundToInt()
+            val minutes = (duration / 1000 / 60).roundToInt()
+            val seconds = (duration / 1000 - minutes * 60).roundToInt()
+            return getSongDuration(hours.toString(), minutes.toString(), seconds.toString())
+        }
+        return null
+    }
+
+    private fun setSongHintText(duration: String) {
+        durationText.text = duration
+    }
+
+    override fun onStopTrackingTouch(seekBar: SeekBar) {
+        if (actualSong == null){
+            seekBar.isClickable = false
+        }else{
+            if (seekBar.progress != 0){
+                mediaController?.seekTo(actualSong!!.duration / (seekBar.progress / 10))
+            }
+            seekBar.isClickable = true
+            durationText.setGone()
+        }
     }
 
     override fun onResume() {
@@ -153,13 +135,44 @@ class PlayerFragment : Fragment(), SeekBar.OnSeekBarChangeListener, View.OnClick
     }
 
     private fun checkMusicStateBtn() {
-        val pauseIc = resources.getDrawable(R.drawable.ic_pause_btn, null)
-        val playIc = resources.getDrawable(R.drawable.ic_play_button, null)
-
-        if (mediaPlayer.isPlaying){
+        if (mediaController!!.isPlaying()){
             musicStateBtn.background = pauseIc
         }else{
             musicStateBtn.background = playIc
         }
+    }
+
+    fun setMediaController(controller: MediaPlayerController){
+        mediaController = controller
+    }
+
+    override fun onSongPlay(song: Song) {
+        setSongDetails(song)
+        checkMusicStateBtn()
+        actualSong = song
+    }
+
+    private fun setSongDetails(song: Song) {
+        songDuration.text = getSongDuration(song.hours, song.minutes, song.seconds)
+        artist.text = song.artist
+        songName.text = song.name
+    }
+
+    private fun getSongDuration(hours: String, minutes: String, seconds: String): String {
+        var songMinutes = minutes
+        var songSeconds = seconds
+
+        if (minutes.toInt() < 10){
+            songMinutes = "0$minutes"
+        }
+        if (seconds.toInt() < 10){
+            songSeconds = "0$seconds"
+        }
+
+        return "$hours:$songMinutes:$songSeconds"
+    }
+
+    override fun onSongPause() {
+        checkMusicStateBtn()
     }
 }

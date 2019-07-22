@@ -1,4 +1,4 @@
-package com.goose.player
+package com.goose.player.adapter
 
 import android.content.Context
 import android.support.v7.widget.RecyclerView

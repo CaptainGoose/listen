@@ -7,6 +7,7 @@ class Song(var path: String,
            var name: String,
            var album: String,
            var artist: String,
+           var duration: Int,
            var hours: String,
            var minutes: String,
            var seconds: String)

@@ -34,7 +34,7 @@ object FileHelper {
                 val minutes = (duration.toInt() / 1000 / 60).toString()
                 val seconds = (duration.toInt() / 1000 - minutes.toInt() * 60).toString()
 
-                val audioModel = Song(path, name, album, artist, hours, minutes, seconds)
+                val audioModel = Song(path, name, album, artist, duration.toInt(), hours, minutes, seconds)
 
                 Log.e("Name :$name", " Album :$album")
                 Log.e("Path :$path", " Artist :$artist")
