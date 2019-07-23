@@ -2,8 +2,8 @@ package com.goose.player.extensions
 
 import android.app.Activity
 import android.content.Context
-import android.support.v4.app.Fragment
 import android.widget.Toast
+import androidx.fragment.app.Fragment
 
 /**
  *Created by Gxxxse on 20.07.2019.

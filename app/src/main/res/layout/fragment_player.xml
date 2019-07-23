@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -8,14 +8,14 @@
     tools:context=".view.PlayerFragment"
     android:id="@+id/playerFragment">
 
-    <android.support.v7.widget.Toolbar
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbarMock"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/colorPrimary"
         app:layout_constraintTop_toTopOf="parent">
 
-        <android.support.constraint.ConstraintLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
@@ -40,8 +40,8 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
-        </android.support.constraint.ConstraintLayout>
-    </android.support.v7.widget.Toolbar>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.appcompat.widget.Toolbar>
 
     <TextView
         android:id="@+id/header"
@@ -49,7 +49,7 @@
         android:layout_height="wrap_content"
         android:background="@color/colorPrimary"
         android:paddingTop="20dp"
-        android:text="Good playlist"
+        android:text="@string/app_name"
         android:textAlignment="center"
         android:textColor="@color/white"
         android:textSize="26sp"
@@ -62,7 +62,6 @@
         android:layout_height="wrap_content"
         android:background="@drawable/rounded_bottom_bg"
         android:paddingBottom="50dp"
-        android:text="For good boys"
         android:textAlignment="center"
         android:textColor="@color/white60"
         app:layout_constraintTop_toBottomOf="@id/header" />
@@ -82,11 +81,12 @@
 
     <com.makeramen.roundedimageview.RoundedImageView
         android:id="@+id/album"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintWidth_percent="0.5"
+        app:layout_constraintHeight_percent="0.3"
         android:layout_marginTop="20dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/album"
         app:layout_constraintBottom_toTopOf="@id/artist"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -94,34 +94,38 @@
         app:riv_corner_radius="30dip"
         app:riv_mutate_background="true"
         app:riv_oval="true"
+        android:src="@drawable/album"
+        android:visibility="visible"
         app:riv_tile_mode="repeat" />
 
     <TextView
         android:id="@+id/artist"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Charlie Puth"
+        android:text="@string/artist"
         android:textAlignment="center"
         android:textColor="@color/white"
         android:textSize="18sp"
-        app:layout_constraintBottom_toTopOf="@id/songName" />
+        app:layout_constraintBottom_toTopOf="@id/songName"
+        app:layout_constraintTop_toBottomOf="@id/album" />
 
     <TextView
         android:id="@+id/songName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="50dp"
-        android:text="Attention"
+        android:text="@string/song"
         android:textAlignment="center"
         android:textColor="@color/white60"
         android:textSize="16sp"
-        app:layout_constraintBottom_toTopOf="@id/musicDurationSeekBar" />
+        app:layout_constraintBottom_toTopOf="@id/musicDurationSeekBar"
+        app:layout_constraintTop_toBottomOf="@id/artist"/>
 
     <TextView
-        android:id="@+id/actualDurationPosition"
+        android:id="@+id/actualDuration"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0:00:00"
+        android:text="@string/zero_time"
         android:layout_marginStart="10dp"
         android:textColor="@color/white"
         app:layout_constraintBottom_toTopOf="@id/musicDurationSeekBar"
@@ -131,25 +135,13 @@
         android:id="@+id/songDuration"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0:00:00"
+        android:text="@string/zero_time"
         android:layout_marginEnd="10dp"
         android:textColor="@color/white"
         app:layout_constraintBottom_toTopOf="@id/musicDurationSeekBar"
         app:layout_constraintEnd_toEndOf="@id/musicDurationSeekBar" />
 
-    <TextView
-        android:id="@+id/durationText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="0:00"
-        android:textColor="@color/white"
-        android:textSize="15sp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/musicDurationSeekBar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <android.support.v7.widget.AppCompatSeekBar
+    <androidx.appcompat.widget.AppCompatSeekBar
         android:id="@+id/musicDurationSeekBar"
         android:layout_width="match_parent"
         android:layout_height="30dp"
@@ -158,7 +150,7 @@
         android:layout_marginBottom="20dp"
         app:layout_constraintBottom_toTopOf="@+id/musicNav" />
 
-    <android.support.constraint.ConstraintLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/musicNav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -170,6 +162,7 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
+            android:id="@+id/prevBtn"
             android:layout_width="25dp"
             android:layout_height="20dp"
             android:layout_marginStart="50dp"
@@ -188,6 +181,7 @@
             app:layout_constraintStart_toStartOf="parent" />
 
         <Button
+            android:id="@+id/nextBtn"
             android:layout_width="25dp"
             android:layout_height="20dp"
             android:layout_marginEnd="50dp"
@@ -196,6 +190,6 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-    </android.support.constraint.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-</android.support.constraint.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

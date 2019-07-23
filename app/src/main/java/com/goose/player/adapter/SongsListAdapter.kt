@@ -1,12 +1,12 @@
 package com.goose.player.adapter
 
 import android.net.Uri
-import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.goose.player.R
 import com.goose.player.entity.Song
@@ -24,7 +24,7 @@ class SongsListAdapter(private val dataset: ArrayList<Song>): RecyclerView.Adapt
         fun bind(song: Song){
             artist.text = song.artist
             songName.text = song.name
-            Glide.with(itemView).load(Uri.parse(song.path)).into(album)
+            Glide.with(itemView).load(Uri.parse(song.album)).into(album)
         }
     }
 

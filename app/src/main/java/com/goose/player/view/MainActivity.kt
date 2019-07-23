@@ -1,7 +1,7 @@
 package com.goose.player.view
 
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
 import com.goose.player.MediaPlayerController
 import com.goose.player.R
 import com.goose.player.adapter.MainMenuViewPagerAdapter

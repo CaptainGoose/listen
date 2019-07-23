@@ -1,8 +1,5 @@
 package com.goose.player.adapter
 
-import android.support.v4.app.Fragment
-import android.support.v4.app.FragmentManager
-import android.support.v4.app.FragmentPagerAdapter
 import com.goose.player.MediaPlayerController
 import com.goose.player.view.PlayerFragment
 import com.goose.player.view.SongListFragment
@@ -10,7 +7,7 @@ import com.goose.player.view.SongListFragment
 /**
  *Created by Gxxxse on 20.07.2019.
  */
-class MainMenuViewPagerAdapter(fm: FragmentManager, controller: MediaPlayerController): FragmentPagerAdapter(fm) {
+class MainMenuViewPagerAdapter(fm: androidx.fragment.app.FragmentManager, controller: MediaPlayerController): androidx.fragment.app.FragmentPagerAdapter(fm) {
     private var playerFragment: PlayerFragment = PlayerFragment()
     private var songListFragment: SongListFragment = SongListFragment()
 
@@ -19,7 +16,7 @@ class MainMenuViewPagerAdapter(fm: FragmentManager, controller: MediaPlayerContr
         songListFragment.setMediaController(controller)
     }
 
-    override fun getItem(position: Int): Fragment {
+    override fun getItem(position: Int): androidx.fragment.app.Fragment {
         when(position){
             0 -> return playerFragment
             1 -> return songListFragment

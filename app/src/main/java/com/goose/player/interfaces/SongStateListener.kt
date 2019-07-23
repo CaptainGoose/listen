@@ -8,4 +8,7 @@ import com.goose.player.entity.Song
 interface SongStateListener {
     fun onSongPlay(song: Song)
     fun onSongPause()
+    fun onSongResume()
+    fun onSongRelease()
+    fun onSeekBarPositionChange(progress: Int)
 }

@@ -5,7 +5,7 @@ package com.goose.player.entity
  */
 class Song(var path: String,
            var name: String,
-           var album: String,
+           var album: String?,
            var artist: String,
            var duration: Int,
            var hours: String,

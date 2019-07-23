@@ -17,7 +17,7 @@ object FileHelper {
         val projection = arrayOf(
             MediaStore.Audio.AudioColumns.DATA,
             MediaStore.Audio.AudioColumns.TITLE,
-            MediaStore.Audio.AudioColumns.ALBUM,
+            MediaStore.Audio.Albums.ALBUM_ART,
             MediaStore.Audio.ArtistColumns.ARTIST,
             MediaStore.Audio.AudioColumns.DURATION
         )
