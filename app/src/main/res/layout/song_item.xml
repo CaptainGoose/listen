@@ -15,14 +15,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:visibility="invisible"
+        android:src="@drawable/ic_vinyl"
         android:layout_margin="10dp" />
 
     <TextView
         android:id="@+id/artist"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:layout_constraintStart_toEndOf="@+id/albumImage"
+        app:layout_constraintStart_toEndOf="@id/albumImage"
         app:layout_constraintEnd_toEndOf="parent"
         android:text="Charlie Puth"
         android:textColor="@color/white"
@@ -37,7 +37,7 @@
         android:text="Attention"
         android:textSize="16sp"
         android:textColor="@color/white60"
-        app:layout_constraintStart_toEndOf="@+id/albumImage"
+        app:layout_constraintStart_toEndOf="@id/albumImage"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         android:layout_marginBottom="10dp"

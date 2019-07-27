@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="100dp"
+    android:background="@color/colorPrimary"
+    android:orientation="horizontal" >
+
+    <ImageView
+        android:id="@+id/status_bar_album_art"
+        android:layout_width="@dimen/status_bar_album_art"
+        android:layout_height="@dimen/status_bar_album_art"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_vinyl"
+        android:layout_margin="10dp" />
+
+    <ImageView
+        android:id="@+id/status_bar_icon"
+        android:layout_width="@dimen/status_bar_album_art"
+        android:layout_height="@dimen/status_bar_album_art"
+        android:background="@drawable/status_bg"
+        android:scaleType="center"
+        android:src="@drawable/ic_vinyl"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="10dp">
+
+        <TextView
+            android:id="@+id/status_bar_track_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:text="Artist"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:id="@+id/status_bar_artist_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:text="Song"
+            android:maxLines="1"
+            android:textSize="13sp"
+            android:textColor="@color/white60"/>
+
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/status_bar_prev"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:contentDescription="@string/cd_play"
+        android:layout_gravity="center"
+        android:padding="18dp"
+        android:src="@drawable/ic_previous_arrow"
+        />
+
+    <ImageView
+        android:id="@+id/status_bar_play"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:padding="5dp"
+        android:contentDescription="@string/cd_play"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_play_button"
+        />
+
+    <ImageView
+        android:id="@+id/status_bar_next"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:padding="18dp"
+        android:contentDescription="@string/cd_next"
+        android:src="@drawable/ic_next_arrow"
+        android:layout_gravity="center" />
+
+    <ImageView
+        android:id="@+id/status_bar_collapse"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:padding="15dp"
+        android:layout_gravity="top"
+        android:src="@drawable/ic_collapse" />
+
+</LinearLayout>

@@ -1,6 +1,5 @@
 package com.goose.player.adapter
 
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,7 +13,7 @@ import com.goose.player.entity.Song
 /**
  *Created by Gxxxse on 20.07.2019.
  */
-class SongsListAdapter(private val dataset: ArrayList<Song>): RecyclerView.Adapter<SongsListAdapter.ViewHolder>() {
+class SongsListAdapter(var dataset: ArrayList<Song>): RecyclerView.Adapter<SongsListAdapter.ViewHolder>() {
 
     class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView){
         private val album: ImageView = itemView.findViewById(R.id.albumImage)
@@ -24,7 +23,11 @@ class SongsListAdapter(private val dataset: ArrayList<Song>): RecyclerView.Adapt
         fun bind(song: Song){
             artist.text = song.artist
             songName.text = song.name
-            Glide.with(itemView).load(Uri.parse(song.album)).into(album)
+            if (song.album != null){
+                Glide.with(itemView).load(song.album).into(album)
+            }else{
+                Glide.with(itemView).load(itemView.resources.getDrawable(R.drawable.ic_vinyl)).into(album)
+            }
         }
     }
 
