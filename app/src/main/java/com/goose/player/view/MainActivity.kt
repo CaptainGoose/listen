@@ -2,9 +2,9 @@ package com.goose.player.view
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.goose.player.MediaPlayerController
 import com.goose.player.R
 import com.goose.player.adapter.MainMenuViewPagerAdapter
+import com.goose.player.controller.MediaPlayerController
 import com.goose.player.enums.Pages.PlayerPage
 import com.goose.player.enums.Pages.SongsListPage
 import kotlinx.android.synthetic.main.activity_main.*

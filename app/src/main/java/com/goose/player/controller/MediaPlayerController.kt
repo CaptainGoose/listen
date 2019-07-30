@@ -1,8 +1,9 @@
-package com.goose.player
+package com.goose.player.controller
 
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
+import android.support.v4.media.session.MediaControllerCompat
 import android.util.Log
 import com.goose.player.entity.Song
 import com.goose.player.interfaces.SongStateListener
@@ -15,6 +16,7 @@ import java.util.concurrent.TimeUnit
  *Created by Gxxxse on 21.07.2019.
  */
 class MediaPlayerController(private val context: Context) : MediaPlayer.OnCompletionListener {
+
     private var listener: SongStateListener? = null
     private var mediaPlayer: MediaPlayer? = null
     private var executor: ScheduledExecutorService? = null
@@ -114,5 +116,18 @@ class MediaPlayerController(private val context: Context) : MediaPlayer.OnComple
 
     fun setListener(listener: SongStateListener){
         this.listener = listener
+    }
+
+    fun playNewSong(song: Song, systemMediaController: MediaControllerCompat?) {
+        if (systemMediaController != null){
+            if (mediaPlayer != null && isPlaying()){
+                release()
+            }
+
+            mediaPlayer = MediaPlayer.create(context, Uri.parse(song.path))
+            mediaPlayer?.start()
+            listener?.onSongPlay(song)
+            mediaPlayer?.setOnCompletionListener(this)
+        }
     }
 }

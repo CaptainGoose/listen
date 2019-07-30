@@ -6,10 +6,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.goose.player.MediaPlayerController
 import com.goose.player.R
 import com.goose.player.adapter.RecycleTouchListener
 import com.goose.player.adapter.SongsListAdapter
+import com.goose.player.controller.MediaPlayerController
 import com.goose.player.entity.Song
 import com.goose.player.extensions.setGone
 import com.goose.player.interfaces.ClickListener

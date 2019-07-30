@@ -1,41 +1,34 @@
 package com.goose.player.view
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
 import android.net.Uri.fromParts
 import android.os.Bundle
 import android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.SeekBar
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.bumptech.glide.Glide
-import com.goose.player.Constants
-import com.goose.player.MediaPlayerController
-import com.goose.player.NotificationService
+import androidx.fragment.app.Fragment
 import com.goose.player.R
+import com.goose.player.controller.MediaPlayerController
+import com.goose.player.controller.PlayerFragmentController
 import com.goose.player.entity.Song
 import com.goose.player.interfaces.SongStateListener
 import com.goose.player.utils.FileHelper.getAllAudioFromDevice
 import kotlinx.android.synthetic.main.fragment_player.*
 
+private const val REQUEST_READ_PERMISSIONS = 1
+private const val SETTINGS_CODE = 2
 
-class PlayerFragment : androidx.fragment.app.Fragment(), SeekBar.OnSeekBarChangeListener, View.OnClickListener,
-    SongStateListener {
+class PlayerFragment : Fragment(), View.OnClickListener, SongStateListener {
 
-    private val REQUEST_READ_PERMISSIONS = 1
-    private var songList = ArrayList<Song>()
+    private lateinit var playerFragmentController: PlayerFragmentController
     private var mediaController: MediaPlayerController? = null
-    private lateinit var pauseIc: Drawable
-    private lateinit var playIc: Drawable
-    private var actualSong: Song? = null
-    private val SETTINGS_CODE = 2
+    private var songList = ArrayList<Song>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_player, container, false)
@@ -44,21 +37,33 @@ class PlayerFragment : androidx.fragment.app.Fragment(), SeekBar.OnSeekBarChange
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         checkPermissions()
-        musicDurationSeekBar.setOnSeekBarChangeListener(this)
-        showSongListBtn.setOnClickListener(this)
-        musicStateBtn.setOnClickListener(this)
         mediaController?.setListener(this)
+        musicStateBtn.setOnClickListener(this)
+        showSongListBtn.setOnClickListener(this)
         nextBtn.setOnClickListener(this)
         prevBtn.setOnClickListener(this)
+        initFragmentController()
+    }
 
-        pauseIc = resources.getDrawable(R.drawable.ic_pause_btn, null)
-        playIc = resources.getDrawable(R.drawable.ic_play_button, null)
+    private fun initFragmentController() {
+        playerFragmentController = PlayerFragmentController.Builder()
+            .activity(activity!!)
+            .setContext(context!!)
+            .mediaController(mediaController!!)
+            .songList(songList)
+            .view(view!!)
+            .build()
     }
 
     private fun checkPermissions() {
         if (ContextCompat.checkSelfPermission(context!!, Manifest.permission.READ_EXTERNAL_STORAGE)
-            != PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(activity!!, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity!!,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                )
+            ) {
                 createDialog()
             } else {
                 ActivityCompat.requestPermissions(
@@ -72,82 +77,12 @@ class PlayerFragment : androidx.fragment.app.Fragment(), SeekBar.OnSeekBarChange
         }
     }
 
-    private fun onNextClick() {
-        if (mediaController!!.isPlaying()) {
-            val position = getActualSongPosition()
-            if (position == songList.size) {
-                mediaController?.playNewSong(songList[position])
-            } else {
-                saveActualSongPosition(position + 1)
-                mediaController?.playNewSong(songList[position + 1])
-            }
-        }
-    }
-
-    private fun onPreviousClick() {
-        if (mediaController!!.isPlaying()) {
-            val position = getActualSongPosition()
-            if (position == 0) {
-                mediaController?.playNewSong(songList[position])
-            } else {
-                saveActualSongPosition(position - 1)
-                mediaController?.playNewSong(songList[position - 1])
-            }
-        }
-    }
-
-    private fun saveActualSongPosition(position: Int) {
-        val sharedPref = activity?.getPreferences(Context.MODE_PRIVATE) ?: return
-        with(sharedPref.edit()) {
-            putInt("actualSongPosition", position)
-            apply()
-        }
-    }
-
-    private fun getActualSongPosition(): Int {
-        val sharedPref = activity?.getPreferences(Context.MODE_PRIVATE)
-        return sharedPref?.getInt("actualSongPosition", 0)!!
-    }
-
     override fun onClick(v: View) {
         when (v) {
-            musicStateBtn -> musicStateAction()
-            showSongListBtn -> showSongList()
-            nextBtn -> onNextClick()
-            prevBtn -> onPreviousClick()
-        }
-    }
-
-    private fun showSongList() {
-        (activity as MainActivity).showSongsList()
-    }
-
-    override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-        if (actualSong != null) {
-            formatSeekBarDurationHint(progress)?.let { setSongHintText(it) }
-        }
-    }
-
-    override fun onStartTrackingTouch(seekBar: SeekBar) {
-    }
-
-    private fun formatSeekBarDurationHint(progress: Int): String? {
-        if (actualSong != null && progress != 0) {
-            val hours = progress / 1000 / 60 / 60
-            val minutes = progress / 1000 / 60
-            val seconds = progress / 1000 - minutes * 60
-            return getSongDuration(hours.toString(), minutes.toString(), seconds.toString())
-        }
-        return null
-    }
-
-    private fun setSongHintText(duration: String) {
-        actualDuration.text = duration
-    }
-
-    override fun onStopTrackingTouch(seekBar: SeekBar) {
-        if (actualSong != null && seekBar.progress != 0) {
-            mediaController?.seekTo(seekBar.progress)
+            musicStateBtn -> playerFragmentController.musicStateAction()
+            showSongListBtn -> playerFragmentController.showSongList()
+            nextBtn -> playerFragmentController.onNextClick()
+            prevBtn -> playerFragmentController.onPreviousClick()
         }
     }
 
@@ -156,66 +91,23 @@ class PlayerFragment : androidx.fragment.app.Fragment(), SeekBar.OnSeekBarChange
     }
 
     override fun onSongPlay(song: Song) {
-        musicDurationSeekBar.max = song.duration
-        setSongDetails(song)
-        mediaController!!.startUpdatingCallbackWithPosition()
-        musicStateBtn.background = null
-        musicStateBtn.background = pauseIc
-        actualSong = song
+        playerFragmentController.onSongPlay(song)
     }
 
     override fun onSongResume() {
-        musicStateBtn.background = null
-        musicStateBtn.background = pauseIc
-        mediaController!!.startUpdatingCallbackWithPosition()
-    }
-
-    private fun musicStateAction() {
-        if (mediaController!!.isPlaying()) {
-            mediaController!!.pause()
-        } else {
-            mediaController!!.play()
-            startService()
-        }
-    }
-
-    private fun setSongDetails(song: Song) {
-        songDuration.text = getSongDuration(song.hours, song.minutes, song.seconds)
-        artist.text = song.artist
-        songName.text = song.name
-        if (song.album != null) {
-            Glide.with(this).load(song.album).into(album)
-        } else {
-            Glide.with(this).load(resources.getDrawable(R.drawable.ic_vinyl, null)).into(album)
-        }
-    }
-
-    private fun getSongDuration(hours: String, minutes: String, seconds: String): String {
-        var songMinutes = minutes
-        var songSeconds = seconds
-
-        if (minutes.toInt() < 10) {
-            songMinutes = "0$minutes"
-        }
-        if (seconds.toInt() < 10) {
-            songSeconds = "0$seconds"
-        }
-
-        return "$hours:$songMinutes:$songSeconds"
+        playerFragmentController.onSongResume()
     }
 
     override fun onSongPause() {
-        musicStateBtn.background = null
-        musicStateBtn.background = playIc
-        mediaController?.stopUpdatingCallbackWithPosition(false)
+        playerFragmentController.onSongPause()
     }
 
     override fun onSongRelease() {
-        mediaController?.stopUpdatingCallbackWithPosition(true)
+        playerFragmentController.onSongRelease()
     }
 
     override fun onSeekBarPositionChange(progress: Int) {
-        musicDurationSeekBar.progress = progress
+        playerFragmentController.onSeekBarPositionChange(progress)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -235,9 +127,9 @@ class PlayerFragment : androidx.fragment.app.Fragment(), SeekBar.OnSeekBarChange
         }
     }
 
-    private fun createDialog(){
+    private fun createDialog() {
         val builder = AlertDialog.Builder(context!!)
-        with(builder){
+        with(builder) {
             setPositiveButton("Ok") { _, _ -> openAppSettings() }
             setNegativeButton("Cancel") { _, _ -> activity?.finish() }
             setTitle("Enable Permissions")
@@ -258,15 +150,10 @@ class PlayerFragment : androidx.fragment.app.Fragment(), SeekBar.OnSeekBarChange
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == SETTINGS_CODE){
+        if (requestCode == SETTINGS_CODE) {
             checkPermissions()
         }
     }
 
-    fun startService() {
-        val serviceIntent = Intent(context, NotificationService::class.java)
-        serviceIntent.action = Constants.ACTION.STARTFOREGROUND_ACTION
-        context?.startService(serviceIntent)
-    }
 
 }

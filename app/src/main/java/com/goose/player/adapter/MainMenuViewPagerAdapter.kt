@@ -1,6 +1,6 @@
 package com.goose.player.adapter
 
-import com.goose.player.MediaPlayerController
+import com.goose.player.controller.MediaPlayerController
 import com.goose.player.view.PlayerFragment
 import com.goose.player.view.SongListFragment
 
