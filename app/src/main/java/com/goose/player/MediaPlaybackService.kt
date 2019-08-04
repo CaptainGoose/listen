@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY
-import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
 import android.service.media.MediaBrowserService
@@ -18,7 +17,6 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.media.MediaBrowserServiceCompat
-import com.goose.player.controller.MediaPlayerController
 import com.goose.player.entity.Song
 import com.goose.player.utils.NotificationHelper.createNotification
 import com.goose.player.utils.NotificationHelper.createNotificationChannel
@@ -39,9 +37,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var myPlayerNotification: Notification
     private lateinit var context: Context
     private lateinit var mediaSession: MediaSessionCompat
-    private lateinit var player: MediaPlayer
     private lateinit var notificationManager: NotificationManager
-    private lateinit var myMediaController: MediaPlayerController
 
     private val myNoisyAudioStreamReceiver = BecomingNoisyReceiver()
     private val intentFilter = IntentFilter(ACTION_AUDIO_BECOMING_NOISY)
@@ -50,9 +46,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         super.onCreate()
         context = applicationContext
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        player = MediaPlayer()
         createMediaSession()
-        myMediaController = MediaPlayerController(context, player, mediaSession)
     }
 
     private fun createMediaSession() {
@@ -87,7 +81,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPlay() {
             startService(Intent(context, MediaBrowserService::class.java))
             mediaSession.isActive = true
-            myMediaController.play()
             mediaSession.setPlaybackState(buildPlayState())
             registerReceiver(myNoisyAudioStreamReceiver, intentFilter)
             Log.d("MediaSessionCallback", "play")
@@ -96,7 +89,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPause() {
             super.onPause()
             mediaSession.isActive = false
-            myMediaController.pause()
             mediaSession.setPlaybackState(buildPauseState())
             Log.d("MediaSessionCallback", "pause")
         }
@@ -104,8 +96,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         override fun onPlayFromUri(uri: Uri?, extras: Bundle?) {
             super.onPlayFromUri(uri, extras)
             val song = extras?.getSerializable("song") as Song
-            myMediaController.playNewSong(song)
-            mediaSession.setPlaybackState(buildPlayState())
+            mediaSession.setPlaybackState(buildBufferingState())
             mediaSession.setMetadata(buildMetadata(song))
             buildNotification(song)
             Log.d("MediaSessionCallback", "fromUri")
@@ -115,7 +106,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             super.onStop()
             unregisterReceiver(myNoisyAudioStreamReceiver)
             mediaSession.isActive = false
-            player.stop()
             stopSelf()
             stopForeground(false)
             unregisterReceiver(myNoisyAudioStreamReceiver)
@@ -151,8 +141,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 SPEED_PLAYING).build()
     }
 
-    fun isPlaying(): Boolean {
-        return mediaSession.controller.playbackState.playbackState == PlaybackStateCompat.STATE_PLAYING
+    private fun buildBufferingState(): PlaybackStateCompat {
+        return PlaybackStateCompat.Builder()
+            .setState(PlaybackStateCompat.STATE_BUFFERING,
+                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                SPEED_PLAYING).build()
     }
 
     private fun buildNotification(song: Song) {

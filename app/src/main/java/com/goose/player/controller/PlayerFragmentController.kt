@@ -3,6 +3,7 @@ package com.goose.player.controller
 import android.app.Activity
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
@@ -37,6 +38,8 @@ class PlayerFragmentController(
     private var seekBarPositionUpdateTask: Runnable? = null
     private var pauseIc: Drawable = context.resources.getDrawable(R.drawable.ic_pause_btn, null)
     private var playIc: Drawable = context.resources.getDrawable(R.drawable.ic_play_button, null)
+    private var player: MediaPlayer
+    private var myMediaController: MediaPlayerController
 
     data class Builder(var mediaController: MediaControllerCompat? = null,
                        var context: Context? = null,
@@ -62,6 +65,8 @@ class PlayerFragmentController(
     init {
         view.musicDurationSeekBar.setOnSeekBarChangeListener(this)
         mediaController.registerCallback(this)
+        player = MediaPlayer()
+        myMediaController = MediaPlayerController(context, mediaController)
     }
 
     override fun onPlaybackStateChanged(state: PlaybackStateCompat) {
@@ -69,6 +74,7 @@ class PlayerFragmentController(
         when {
             state.state == PlaybackStateCompat.STATE_PLAYING -> onSongPlay()
             state.state == PlaybackStateCompat.STATE_PAUSED -> onSongPause()
+            state.state == PlaybackStateCompat.STATE_BUFFERING -> onSongBuffering()
         }
     }
 
@@ -103,15 +109,13 @@ class PlayerFragmentController(
     }
 
     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-        if (actualSong != null) {
-            formatSeekBarDurationHint(progress)?.let { setSongHintText(it) }
-        }
+        formatSeekBarDurationHint(progress)?.let { setSongHintText(it) }
     }
 
     override fun onStartTrackingTouch(seekBar: SeekBar) {}
 
     private fun formatSeekBarDurationHint(progress: Int): String? {
-        if (actualSong != null && progress != 0) {
+        if (progress != 0) {
             val hours = progress / 1000 / 60 / 60
             val minutes = progress / 1000 / 60
             val seconds = progress / 1000 - minutes * 60
@@ -125,8 +129,8 @@ class PlayerFragmentController(
     }
 
     override fun onStopTrackingTouch(seekBar: SeekBar) {
-        if (actualSong != null && seekBar.progress != 0) {
-            mediaController.transportControls.seekTo(seekBar.progress.toLong())
+        if (seekBar.progress != 0) {
+            myMediaController.seekTo(seekBar.progress)
         }
     }
 
@@ -170,12 +174,18 @@ class PlayerFragmentController(
     }
 
     private fun onSongPlay() {
+        view.musicStateBtn.background = null
+        view.musicStateBtn.background = pauseIc
+        myMediaController.play()
+        startUpdatingCallbackWithPosition()
+    }
+
+    private fun onSongBuffering() {
         val metadata = mediaController.metadata
         songList = loadSongList(context)
         view.musicDurationSeekBar.max = metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION).toInt()
-        view.musicStateBtn.background = null
-        view.musicStateBtn.background = pauseIc
-//        startUpdatingCallbackWithPosition()
+        myMediaController.playNewSong(metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI))
+        mediaController.transportControls.play()
     }
 
     private fun createSongInstanceFromMetadata(metadata: MediaMetadataCompat): Song {
@@ -191,17 +201,11 @@ class PlayerFragmentController(
         )
     }
 
-    fun onSongResume() {
-        songList = loadSongList(context)
-        view.musicStateBtn.background = null
-        view.musicStateBtn.background = pauseIc
-//        startUpdatingCallbackWithPosition()
-    }
-
     private fun onSongPause() {
         view.musicStateBtn.background = null
         view.musicStateBtn.background = playIc
-//        stopUpdatingCallbackWithPosition(false)
+        myMediaController.pause()
+        stopUpdatingCallbackWithPosition(false)
     }
 
     fun onSongRelease() {
@@ -225,8 +229,8 @@ class PlayerFragmentController(
 
     private fun updateProgressCallbackTask() {
         if (isPlaying()) {
-//            val currentPosition = mediaController.
-
+            val currentPosition = myMediaController.getCurrentPosition()
+            onSeekBarPositionChange(currentPosition)
         }
     }
 
@@ -241,7 +245,7 @@ class PlayerFragmentController(
         }
     }
 
-    fun onSeekBarPositionChange(progress: Int) {
+    private fun onSeekBarPositionChange(progress: Int) {
         view.musicDurationSeekBar.progress = progress
     }
 

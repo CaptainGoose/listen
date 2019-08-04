@@ -3,10 +3,8 @@ package com.goose.player.controller
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
-import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.util.Log
-import com.goose.player.entity.Song
 import com.goose.player.interfaces.SongStateListener
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -17,19 +15,23 @@ import java.util.concurrent.TimeUnit
  *Created by Gxxxse on 21.07.2019.
  */
 class MediaPlayerController(private val context: Context,
-                            private var mediaPlayer: MediaPlayer,
-                            private var mediaSessionCompat: MediaSessionCompat) : MediaPlayer.OnCompletionListener {
+                            private val mediaControllerCompat: MediaControllerCompat) : MediaPlayer.OnCompletionListener {
 
     private var listener: SongStateListener? = null
     private var executor: ScheduledExecutorService? = null
     private var seekBarPositionUpdateTask: Runnable? = null
+    private var mediaPlayer = MediaPlayer()
 
     private fun release() {
         mediaPlayer.release()
     }
 
+    fun getCurrentPosition(): Int {
+        return mediaPlayer.currentPosition
+    }
+
     private fun isPlaying(): Boolean {
-        return mediaSessionCompat.controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING
+        return mediaPlayer.isPlaying
     }
 
     fun startUpdatingCallbackWithPosition() {
@@ -68,13 +70,12 @@ class MediaPlayerController(private val context: Context,
     }
 
 
-    fun playNewSong(song: Song){
+    fun playNewSong(path: String){
         if (isPlaying()){
             release()
         }
 
-        mediaPlayer = MediaPlayer.create(context, Uri.parse(song.path))
-        mediaPlayer.start()
+        mediaPlayer = MediaPlayer.create(context, Uri.parse(path))
         mediaPlayer.setOnCompletionListener(this)
     }
 
