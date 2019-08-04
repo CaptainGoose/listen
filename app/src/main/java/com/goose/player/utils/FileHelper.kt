@@ -1,8 +1,6 @@
 package com.goose.player.utils
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.provider.MediaStore
 import com.goose.player.entity.Song
 
@@ -44,7 +42,7 @@ object FileHelper {
         return tempAudioList
     }
 
-    private fun getAlbumArt(context: Context, albumId: String): Bitmap? {
+    private fun getAlbumArt(context: Context, albumId: String): String? {
         val cursor = context.contentResolver.query(
             MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
             arrayOf(MediaStore.Audio.Albums._ID, MediaStore.Audio.Albums.ALBUM_ART),
@@ -52,8 +50,7 @@ object FileHelper {
             arrayOf(albumId), null)
 
         if (cursor.moveToFirst()) {
-            val albumArtPath = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ALBUM_ART))
-            return BitmapFactory.decodeFile(albumArtPath)
+            return cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ALBUM_ART))
         }
         return null
     }

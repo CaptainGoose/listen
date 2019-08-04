@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri.fromParts
 import android.os.Bundle
 import android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+import android.support.v4.media.session.MediaControllerCompat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,20 +15,19 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.goose.player.R
-import com.goose.player.controller.MediaPlayerController
 import com.goose.player.controller.PlayerFragmentController
 import com.goose.player.entity.Song
-import com.goose.player.interfaces.SongStateListener
 import com.goose.player.utils.FileHelper.getAllAudioFromDevice
 import kotlinx.android.synthetic.main.fragment_player.*
+
 
 private const val REQUEST_READ_PERMISSIONS = 1
 private const val SETTINGS_CODE = 2
 
-class PlayerFragment : Fragment(), View.OnClickListener, SongStateListener {
+class PlayerFragment : Fragment(), View.OnClickListener {
 
     private lateinit var playerFragmentController: PlayerFragmentController
-    private var mediaController: MediaPlayerController? = null
+    private var mediaController: MediaControllerCompat? = null
     private var songList = ArrayList<Song>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -37,7 +37,7 @@ class PlayerFragment : Fragment(), View.OnClickListener, SongStateListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         checkPermissions()
-        mediaController?.setListener(this)
+        mediaController = MediaControllerCompat.getMediaController(activity as MainActivity)
         musicStateBtn.setOnClickListener(this)
         showSongListBtn.setOnClickListener(this)
         nextBtn.setOnClickListener(this)
@@ -50,27 +50,23 @@ class PlayerFragment : Fragment(), View.OnClickListener, SongStateListener {
             .activity(activity!!)
             .setContext(context!!)
             .mediaController(mediaController!!)
-            .songList(songList)
             .view(view!!)
             .build()
     }
 
     private fun checkPermissions() {
-        if (ContextCompat.checkSelfPermission(context!!, Manifest.permission.READ_EXTERNAL_STORAGE)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(
-                    activity!!,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                )
-            ) {
+        val permissionState
+                = ContextCompat.checkSelfPermission(context!!, Manifest.permission.READ_EXTERNAL_STORAGE)
+        val shouldShowRationale
+                = ActivityCompat.shouldShowRequestPermissionRationale(activity!!, Manifest.permission.READ_EXTERNAL_STORAGE)
+        if (permissionState != PackageManager.PERMISSION_GRANTED) {
+            if (shouldShowRationale) {
                 createDialog()
             } else {
                 ActivityCompat.requestPermissions(
                     activity!!,
                     arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                    REQUEST_READ_PERMISSIONS
-                )
+                    REQUEST_READ_PERMISSIONS)
             }
         } else {
             songList = getAllAudioFromDevice(context!!)
@@ -84,30 +80,6 @@ class PlayerFragment : Fragment(), View.OnClickListener, SongStateListener {
             nextBtn -> playerFragmentController.onNextClick()
             prevBtn -> playerFragmentController.onPreviousClick()
         }
-    }
-
-    fun setMediaController(controller: MediaPlayerController) {
-        mediaController = controller
-    }
-
-    override fun onSongPlay(song: Song) {
-        playerFragmentController.onSongPlay(song)
-    }
-
-    override fun onSongResume() {
-        playerFragmentController.onSongResume()
-    }
-
-    override fun onSongPause() {
-        playerFragmentController.onSongPause()
-    }
-
-    override fun onSongRelease() {
-        playerFragmentController.onSongRelease()
-    }
-
-    override fun onSeekBarPositionChange(progress: Int) {
-        playerFragmentController.onSeekBarPositionChange(progress)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -155,5 +127,7 @@ class PlayerFragment : Fragment(), View.OnClickListener, SongStateListener {
         }
     }
 
-
+    fun setSystemMediaController(systemControllerCompat: MediaControllerCompat) {
+        this.mediaController = systemControllerCompat
+    }
 }

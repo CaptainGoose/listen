@@ -1,37 +1,54 @@
 package com.goose.player.view
 
-import android.content.Context
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.support.v4.media.session.MediaControllerCompat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.goose.player.R
 import com.goose.player.adapter.RecycleTouchListener
 import com.goose.player.adapter.SongsListAdapter
-import com.goose.player.controller.MediaPlayerController
 import com.goose.player.entity.Song
 import com.goose.player.extensions.setGone
 import com.goose.player.interfaces.ClickListener
 import com.goose.player.utils.FileHelper.getAllAudioFromDevice
+import com.goose.player.utils.StorageUtil.storeSongIndex
+import com.goose.player.utils.StorageUtil.storeSongList
 import kotlinx.android.synthetic.main.fragment_song_list.*
+import java.io.Serializable
 
 class SongListFragment : androidx.fragment.app.Fragment(), ClickListener, SwipeRefreshLayout.OnRefreshListener,
     View.OnClickListener {
 
     private var songsList = ArrayList<Song>()
     private var songsListAdapter = SongsListAdapter(ArrayList())
-    private var playerController: MediaPlayerController? = null
+    private var systemMediaController: MediaControllerCompat? = null
+    private lateinit var mainActivity: MainActivity
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_song_list, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        mainActivity = activity as MainActivity
         initRecyclerView()
-        showPlayerBtn.setOnClickListener { (activity as MainActivity).showPlayer() }
+        showPlayerBtn.setOnClickListener { mainActivity.showPlayer() }
         refresher.setOnRefreshListener(this)
         getMusicBtn.setOnClickListener(this)
+        getDataIfHasPermission()
+    }
+
+    private fun getDataIfHasPermission() {
+        if (ContextCompat.checkSelfPermission(context!!, Manifest.permission.READ_EXTERNAL_STORAGE)
+            == PackageManager.PERMISSION_GRANTED) {
+            getData()
+        }
     }
 
     private fun getData() {
@@ -40,6 +57,7 @@ class SongListFragment : androidx.fragment.app.Fragment(), ClickListener, SwipeR
         songsListAdapter.notifyDataSetChanged()
         refresher.isRefreshing = false
         getMusicBtn.setGone()
+        storeSongList(context!!, songsList)
     }
 
     private fun initRecyclerView() {
@@ -53,26 +71,18 @@ class SongListFragment : androidx.fragment.app.Fragment(), ClickListener, SwipeR
 
     override fun onClick(view: View, position: Int) {
         showPlayerAndPlaySong(songsList[position])
-        saveActualSongPosition(position)
+        storeSongIndex(position, context!!)
     }
 
     private fun showPlayerAndPlaySong(song: Song) {
-        (activity as MainActivity).showPlayer()
-        with(playerController!!) {
-            playNewSong(song)
-        }
+        mainActivity.showPlayer()
+        val bundle = Bundle()
+        bundle.putSerializable("song", song as Serializable)
+        systemMediaController?.transportControls?.playFromUri(Uri.parse(song.path), bundle)
     }
 
     override fun onRefresh() {
         getData()
-    }
-
-    private fun saveActualSongPosition(position: Int) {
-        val sharedPref = activity?.getPreferences(Context.MODE_PRIVATE) ?: return
-        with(sharedPref.edit()) {
-            putInt("actualSongPosition", position)
-            apply()
-        }
     }
 
     override fun onLongClick(view: View, position: Int) {
@@ -82,7 +92,8 @@ class SongListFragment : androidx.fragment.app.Fragment(), ClickListener, SwipeR
         getData()
     }
 
-    fun setMediaController(controller: MediaPlayerController) {
-        playerController = controller
+    fun setSystemMediaController(systemMediaController: MediaControllerCompat){
+        this.systemMediaController = systemMediaController
     }
+
 }

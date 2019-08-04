@@ -3,91 +3,98 @@ package com.goose.player.controller
 import android.app.Activity
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.net.Uri
+import android.os.Bundle
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import android.view.View
 import android.widget.SeekBar
 import com.bumptech.glide.Glide
 import com.goose.player.R
 import com.goose.player.entity.Song
+import com.goose.player.utils.StorageUtil.loadAudioIndex
+import com.goose.player.utils.StorageUtil.loadSongList
+import com.goose.player.utils.StorageUtil.storeSongIndex
 import com.goose.player.view.MainActivity
 import kotlinx.android.synthetic.main.fragment_player.view.*
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 /**
  *Created by Gxxxse on 29.07.2019.
  */
 class PlayerFragmentController(
-    private val mediaController: MediaPlayerController,
+    private val mediaController: MediaControllerCompat,
     private val context: Context,
     private val activity: Activity,
-    private val songList: ArrayList<Song>,
-    private val view: View): SeekBar.OnSeekBarChangeListener{
+    private val view: View): SeekBar.OnSeekBarChangeListener, MediaControllerCompat.Callback() {
 
     private var actualSong: Song? = null
+    private var songList = ArrayList<Song>()
+    private var executor: ScheduledExecutorService? = null
+    private var seekBarPositionUpdateTask: Runnable? = null
     private var pauseIc: Drawable = context.resources.getDrawable(R.drawable.ic_pause_btn, null)
     private var playIc: Drawable = context.resources.getDrawable(R.drawable.ic_play_button, null)
 
-    data class Builder(var mediaController: MediaPlayerController? = null,
+    data class Builder(var mediaController: MediaControllerCompat? = null,
                        var context: Context? = null,
                        var activity: Activity? = null,
-                       var songList: ArrayList<Song>? = null,
                        var view: View? = null){
 
-        fun mediaController(mediaController: MediaPlayerController)
+        fun mediaController(mediaController: MediaControllerCompat)
                 = apply { this.mediaController = mediaController }
         fun setContext(context: Context)
                 = apply { this.context = context }
         fun activity(activity: Activity)
                 = apply { this.activity = activity }
-        fun songList(songList: ArrayList<Song>)
-                = apply { this.songList = songList }
         fun view(view: View)
                 = apply { this.view = view }
         fun build() = PlayerFragmentController(
             mediaController!!,
             context!!,
             activity!!,
-            songList!!,
             view!!
         )
     }
 
     init {
         view.musicDurationSeekBar.setOnSeekBarChangeListener(this)
+        mediaController.registerCallback(this)
+    }
+
+    override fun onPlaybackStateChanged(state: PlaybackStateCompat) {
+        super.onPlaybackStateChanged(state)
+        when {
+            state.state == PlaybackStateCompat.STATE_PLAYING -> onSongPlay()
+            state.state == PlaybackStateCompat.STATE_PAUSED -> onSongPause()
+        }
     }
 
     fun onNextClick() {
-        if (mediaController.isPlaying()) {
-            val position = getActualSongPosition()
-            if (position == songList.size - 1) {
-                mediaController.playNewSong(songList[position])
-            } else {
-                saveActualSongPosition(position + 1)
-                mediaController.playNewSong(songList[position + 1])
-            }
+        val position = loadAudioIndex(context)
+        val bundle = Bundle()
+        if (position == songList.size - 1) {
+            bundle.putSerializable("song", songList[position])
+            mediaController.transportControls.playFromUri(Uri.parse(songList[position].path), bundle)
+        } else {
+            bundle.putSerializable("song", songList[position + 1])
+            mediaController.transportControls.playFromUri(Uri.parse(songList[position + 1].path), bundle)
+            storeSongIndex(position + 1, context)
         }
     }
 
     fun onPreviousClick() {
-        if (mediaController.isPlaying()) {
-            val position = getActualSongPosition()
-            if (position == 0) {
-                mediaController.playNewSong(songList[position])
-            } else {
-                saveActualSongPosition(position - 1)
-                mediaController.playNewSong(songList[position - 1])
-            }
-        }
-    }
-
-    private fun getActualSongPosition(): Int {
-        val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
-        return sharedPref?.getInt("actualSongPosition", 0)!!
-    }
-
-    private fun saveActualSongPosition(position: Int) {
-        val sharedPref = activity.getPreferences(Context.MODE_PRIVATE) ?: return
-        with(sharedPref.edit()) {
-            putInt("actualSongPosition", position)
-            apply()
+        val position = loadAudioIndex(context)
+        val bundle = Bundle()
+        if (position == 0) {
+            bundle.putSerializable("song", songList[position])
+            mediaController.transportControls.playFromUri(Uri.parse(songList[position].path), bundle)
+        } else {
+            bundle.putSerializable("song", songList[position - 1])
+            mediaController.transportControls.playFromUri(Uri.parse(songList[position - 1].path), bundle)
+            storeSongIndex(position - 1, context)
         }
     }
 
@@ -119,18 +126,21 @@ class PlayerFragmentController(
 
     override fun onStopTrackingTouch(seekBar: SeekBar) {
         if (actualSong != null && seekBar.progress != 0) {
-            mediaController.seekTo(seekBar.progress)
+            mediaController.transportControls.seekTo(seekBar.progress.toLong())
         }
+    }
+
+    private fun isPlaying(): Boolean {
+        return mediaController.playbackState.state == PlaybackStateCompat.STATE_PLAYING
     }
 
     fun musicStateAction() {
-        if (mediaController.isPlaying()) {
-            mediaController.pause()
+        if (isPlaying()) {
+            mediaController.transportControls.pause()
         } else {
-            mediaController.play()
+            mediaController.transportControls.play()
         }
     }
-
 
     private fun setSongDetails(song: Song) {
         with(view){
@@ -159,33 +169,84 @@ class PlayerFragmentController(
         return "$hours:$songMinutes:$songSeconds"
     }
 
-    fun onSongPlay(song: Song) {
-        view.musicDurationSeekBar.max = song.duration
-        setSongDetails(song)
-        mediaController.startUpdatingCallbackWithPosition()
+    private fun onSongPlay() {
+        val metadata = mediaController.metadata
+        songList = loadSongList(context)
+        view.musicDurationSeekBar.max = metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION).toInt()
         view.musicStateBtn.background = null
         view.musicStateBtn.background = pauseIc
-        actualSong = song
+//        startUpdatingCallbackWithPosition()
+    }
+
+    private fun createSongInstanceFromMetadata(metadata: MediaMetadataCompat): Song {
+        return Song(
+            metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI),
+            metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE),
+            metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI),
+            metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST),
+            metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION).toInt(),
+            metadata.getString("hours"),
+            metadata.getString("minutes"),
+            metadata.getString("seconds")
+        )
     }
 
     fun onSongResume() {
+        songList = loadSongList(context)
         view.musicStateBtn.background = null
         view.musicStateBtn.background = pauseIc
-        mediaController.startUpdatingCallbackWithPosition()
+//        startUpdatingCallbackWithPosition()
     }
 
-    fun onSongPause() {
+    private fun onSongPause() {
         view.musicStateBtn.background = null
         view.musicStateBtn.background = playIc
-        mediaController.stopUpdatingCallbackWithPosition(false)
+//        stopUpdatingCallbackWithPosition(false)
     }
 
     fun onSongRelease() {
-        mediaController.stopUpdatingCallbackWithPosition(true)
+        stopUpdatingCallbackWithPosition(true)
+    }
+
+    private fun startUpdatingCallbackWithPosition() {
+        if (executor == null) {
+            executor = Executors.newSingleThreadScheduledExecutor()
+        }
+        if (seekBarPositionUpdateTask == null) {
+            seekBarPositionUpdateTask = Runnable { updateProgressCallbackTask() }
+        }
+        executor!!.scheduleAtFixedRate(
+            seekBarPositionUpdateTask,
+            0,
+            1000,
+            TimeUnit.MILLISECONDS
+        )
+    }
+
+    private fun updateProgressCallbackTask() {
+        if (isPlaying()) {
+//            val currentPosition = mediaController.
+
+        }
+    }
+
+    private fun stopUpdatingCallbackWithPosition(resetUIPlaybackPosition: Boolean) {
+        if (executor != null) {
+            executor?.shutdownNow()
+            executor = null
+            seekBarPositionUpdateTask = null
+            if (resetUIPlaybackPosition) {
+                onSeekBarPositionChange(0)
+            }
+        }
     }
 
     fun onSeekBarPositionChange(progress: Int) {
         view.musicDurationSeekBar.progress = progress
     }
 
+    override fun onMetadataChanged(metadata: MediaMetadataCompat) {
+        super.onMetadataChanged(metadata)
+        setSongDetails(createSongInstanceFromMetadata(metadata))
+    }
 }

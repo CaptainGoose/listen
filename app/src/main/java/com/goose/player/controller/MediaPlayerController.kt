@@ -3,7 +3,8 @@ package com.goose.player.controller
 import android.content.Context
 import android.media.MediaPlayer
 import android.net.Uri
-import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import com.goose.player.entity.Song
 import com.goose.player.interfaces.SongStateListener
@@ -15,24 +16,20 @@ import java.util.concurrent.TimeUnit
 /**
  *Created by Gxxxse on 21.07.2019.
  */
-class MediaPlayerController(private val context: Context) : MediaPlayer.OnCompletionListener {
+class MediaPlayerController(private val context: Context,
+                            private var mediaPlayer: MediaPlayer,
+                            private var mediaSessionCompat: MediaSessionCompat) : MediaPlayer.OnCompletionListener {
 
     private var listener: SongStateListener? = null
-    private var mediaPlayer: MediaPlayer? = null
     private var executor: ScheduledExecutorService? = null
     private var seekBarPositionUpdateTask: Runnable? = null
 
     private fun release() {
-        mediaPlayer!!.release()
-        mediaPlayer = null
+        mediaPlayer.release()
     }
 
-    fun isPlaying(): Boolean {
-        return if (mediaPlayer != null){
-            mediaPlayer?.isPlaying!!
-        }else{
-            false
-        }
+    private fun isPlaying(): Boolean {
+        return mediaSessionCompat.controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING
     }
 
     fun startUpdatingCallbackWithPosition() {
@@ -51,10 +48,10 @@ class MediaPlayerController(private val context: Context) : MediaPlayer.OnComple
     }
 
     private fun updateProgressCallbackTask() {
-        if (mediaPlayer != null && isPlaying()) {
-            val currentPosition = mediaPlayer!!.currentPosition
+        if (isPlaying()) {
+            val currentPosition = mediaPlayer.currentPosition
             if (listener != null) {
-                listener!!.onSeekBarPositionChange(currentPosition)
+//                listener!!.onSeekBarPositionChange(currentPosition)
             }
         }
     }
@@ -65,69 +62,53 @@ class MediaPlayerController(private val context: Context) : MediaPlayer.OnComple
             executor = null
             seekBarPositionUpdateTask = null
             if (resetUIPlaybackPosition && listener != null) {
-                listener!!.onSeekBarPositionChange(0)
+//                listener!!.onSeekBarPositionChange(0)
             }
         }
     }
 
 
     fun playNewSong(song: Song){
-        if (mediaPlayer != null && isPlaying()){
+        if (isPlaying()){
             release()
         }
 
         mediaPlayer = MediaPlayer.create(context, Uri.parse(song.path))
-        mediaPlayer?.start()
-        listener?.onSongPlay(song)
-        mediaPlayer?.setOnCompletionListener(this)
+        mediaPlayer.start()
+        mediaPlayer.setOnCompletionListener(this)
     }
 
     fun play() {
-        if (mediaPlayer != null && !isPlaying()) {
-            mediaPlayer?.start()
-            listener?.onSongResume()
+        if (!isPlaying()) {
+            mediaPlayer.start()
+            Log.d("MediaSessionCallback", "playFromController")
         }
     }
 
     fun reset() {
-        if (mediaPlayer != null) {
-            mediaPlayer!!.reset()
-        }
+        mediaPlayer.reset()
     }
 
     fun pause() {
-        if (mediaPlayer != null && isPlaying()) {
-            mediaPlayer!!.pause()
-            listener?.onSongPause()
+        if (isPlaying()) {
+            Log.d("MediaSessionCallback", "pauseFromController")
+            mediaPlayer.pause()
+        }
+    }
+
+    fun stop(){
+        if (isPlaying()){
+            mediaPlayer.stop()
         }
     }
 
     fun seekTo(ms: Int) {
-        if (mediaPlayer != null) {
-            mediaPlayer?.seekTo(ms)
-            play()
-        }
+        mediaPlayer.seekTo(ms)
+        play()
     }
 
     override fun onCompletion(mp: MediaPlayer?) {
-        listener?.onSongPause()
         Log.d("song completed", "song completed")
     }
 
-    fun setListener(listener: SongStateListener){
-        this.listener = listener
-    }
-
-    fun playNewSong(song: Song, systemMediaController: MediaControllerCompat?) {
-        if (systemMediaController != null){
-            if (mediaPlayer != null && isPlaying()){
-                release()
-            }
-
-            mediaPlayer = MediaPlayer.create(context, Uri.parse(song.path))
-            mediaPlayer?.start()
-            listener?.onSongPlay(song)
-            mediaPlayer?.setOnCompletionListener(this)
-        }
-    }
 }

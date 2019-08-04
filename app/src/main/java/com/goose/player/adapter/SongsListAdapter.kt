@@ -1,5 +1,6 @@
 package com.goose.player.adapter
 
+import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,9 +25,9 @@ class SongsListAdapter(var dataset: ArrayList<Song>): RecyclerView.Adapter<Songs
             artist.text = song.artist
             songName.text = song.name
             if (song.album != null){
-                Glide.with(itemView).load(song.album).into(album)
+                Glide.with(itemView).load(BitmapFactory.decodeFile(song.album)).into(album)
             }else{
-                Glide.with(itemView).load(itemView.resources.getDrawable(R.drawable.ic_vinyl)).into(album)
+                Glide.with(itemView).load(itemView.resources.getDrawable(R.drawable.ic_vinyl, null)).into(album)
             }
         }
     }

@@ -1,19 +1,20 @@
 package com.goose.player.adapter
 
-import com.goose.player.controller.MediaPlayerController
+import android.support.v4.media.session.MediaControllerCompat
 import com.goose.player.view.PlayerFragment
 import com.goose.player.view.SongListFragment
 
 /**
  *Created by Gxxxse on 20.07.2019.
  */
-class MainMenuViewPagerAdapter(fm: androidx.fragment.app.FragmentManager, controller: MediaPlayerController): androidx.fragment.app.FragmentPagerAdapter(fm) {
+class MainMenuViewPagerAdapter(fm: androidx.fragment.app.FragmentManager,
+                               systemControllerCompat: MediaControllerCompat): androidx.fragment.app.FragmentPagerAdapter(fm) {
     private var playerFragment: PlayerFragment = PlayerFragment()
     private var songListFragment: SongListFragment = SongListFragment()
 
     init {
-        playerFragment.setMediaController(controller)
-        songListFragment.setMediaController(controller)
+        playerFragment.setSystemMediaController(systemControllerCompat)
+        songListFragment.setSystemMediaController(systemControllerCompat)
     }
 
     override fun getItem(position: Int): androidx.fragment.app.Fragment {
