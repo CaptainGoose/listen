@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.goose.player.R
 import com.goose.player.adapter.RecycleTouchListener
@@ -22,7 +23,7 @@ import com.goose.player.utils.StorageUtil.storeSongList
 import kotlinx.android.synthetic.main.fragment_song_list.*
 import java.io.Serializable
 
-class SongListFragment : androidx.fragment.app.Fragment(), ClickListener, SwipeRefreshLayout.OnRefreshListener,
+class SongListFragment : Fragment(), ClickListener, SwipeRefreshLayout.OnRefreshListener,
     View.OnClickListener {
 
     private var songsList = ArrayList<Song>()

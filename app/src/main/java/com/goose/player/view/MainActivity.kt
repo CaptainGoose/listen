@@ -6,14 +6,16 @@ import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
 import androidx.appcompat.app.AppCompatActivity
-import com.goose.player.MediaPlaybackService
 import com.goose.player.R
 import com.goose.player.adapter.MainMenuViewPagerAdapter
 import com.goose.player.enums.Pages.PlayerPage
 import com.goose.player.enums.Pages.SongsListPage
+import com.goose.player.services.MediaPlaybackService
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity(){
+    val SKIP_TO_NEXT = "com.goose.player.action.skiptonext"
+    val SKIP_TO_PREVIOUS = "com.goose.player.action.skiptoprevious"
 
     private lateinit var mediaBrowser: MediaBrowserCompat
     private lateinit var systemMediaController: MediaControllerCompat
@@ -65,7 +67,6 @@ class MainActivity : AppCompatActivity(){
 
     override fun onStop() {
         super.onStop()
-//        MediaControllerCompat.getMediaController(this)?.unregisterCallback(controllerCallback)
         mediaBrowser.disconnect()
     }
 

@@ -1,4 +1,4 @@
-package com.goose.player
+package com.goose.player.services
 
 import android.app.Notification
 import android.app.NotificationManager
@@ -15,9 +15,9 @@ import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
 import androidx.media.MediaBrowserServiceCompat
 import com.goose.player.entity.Song
+import com.goose.player.enums.PlaybackStatus
 import com.goose.player.utils.NotificationHelper.createNotification
 import com.goose.player.utils.NotificationHelper.createNotificationChannel
 import com.goose.player.view.MainActivity
@@ -31,6 +31,12 @@ private const val MY_EMPTY_MEDIA_ROOT_ID = "empty_media_root_id"
 private const val SPEED_PLAYING = 1F
 private const val SPEED_PAUSE = 0F
 private const val SPEED_REWIND = -1F
+
+const val ACTION_PLAY = "com.goose.player.listen.ACTION_PLAY"
+const val ACTION_PAUSE = "com.goose.player.listen.ACTION_PAUSE"
+const val ACTION_PREVIOUS = "com.goose.player.listen.ACTION_PREVIOUS"
+const val ACTION_NEXT = "com.goose.player.listen.ACTION_NEXT"
+const val ACTION_STOP = "com.goose.player.listen.ACTION_STOP"
 
 class MediaPlaybackService : MediaBrowserServiceCompat() {
     private lateinit var stateBuilder: PlaybackStateCompat.Builder
@@ -47,6 +53,11 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         context = applicationContext
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createMediaSession()
+    }
+
+    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        handleIncomingActions(intent)
+        return super.onStartCommand(intent, flags, startId)
     }
 
     private fun createMediaSession() {
@@ -83,14 +94,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             mediaSession.isActive = true
             mediaSession.setPlaybackState(buildPlayState())
             registerReceiver(myNoisyAudioStreamReceiver, intentFilter)
-            Log.d("MediaSessionCallback", "play")
+            buildNotification(PlaybackStatus.PLAYING)
         }
 
         override fun onPause() {
             super.onPause()
+            buildNotification(PlaybackStatus.PAUSED)
             mediaSession.isActive = false
             mediaSession.setPlaybackState(buildPauseState())
-            Log.d("MediaSessionCallback", "pause")
         }
 
         override fun onPlayFromUri(uri: Uri?, extras: Bundle?) {
@@ -98,18 +109,25 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             val song = extras?.getSerializable("song") as Song
             mediaSession.setPlaybackState(buildBufferingState())
             mediaSession.setMetadata(buildMetadata(song))
-            buildNotification(song)
-            Log.d("MediaSessionCallback", "fromUri")
+            buildNotification(PlaybackStatus.PLAYING)
+        }
+
+        override fun onSkipToNext() {
+            super.onSkipToNext()
+            buildNotification(PlaybackStatus.PLAYING)
+        }
+
+        override fun onSkipToPrevious() {
+            super.onSkipToPrevious()
+            buildNotification(PlaybackStatus.PLAYING)
         }
 
         override fun onStop() {
             super.onStop()
-            unregisterReceiver(myNoisyAudioStreamReceiver)
             mediaSession.isActive = false
             stopSelf()
-            stopForeground(false)
-            unregisterReceiver(myNoisyAudioStreamReceiver)
-            Log.d("MediaSessionCallback", "stop")
+            stopForeground(true)
+            mediaSession.setPlaybackState(buildPauseState())
         }
 
     }
@@ -131,26 +149,29 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         return PlaybackStateCompat.Builder()
             .setState(PlaybackStateCompat.STATE_PAUSED,
                 PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                SPEED_PAUSE).build()
+                SPEED_PAUSE
+            ).build()
     }
 
     private fun buildPlayState(): PlaybackStateCompat {
         return PlaybackStateCompat.Builder()
             .setState(PlaybackStateCompat.STATE_PLAYING,
                 PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                SPEED_PLAYING).build()
+                SPEED_PLAYING
+            ).build()
     }
 
     private fun buildBufferingState(): PlaybackStateCompat {
         return PlaybackStateCompat.Builder()
             .setState(PlaybackStateCompat.STATE_BUFFERING,
                 PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-                SPEED_PLAYING).build()
+                SPEED_PLAYING
+            ).build()
     }
 
-    private fun buildNotification(song: Song) {
+    private fun buildNotification(playbackStatus: PlaybackStatus) {
         createNotificationChannel(notificationManager)
-        val builder = createNotification(song, mediaSession, context)
+        val builder = createNotification(mediaSession, context, playbackStatus)
         myPlayerNotification = builder.build()
         startForeground(1, myPlayerNotification)
     }
@@ -171,6 +192,30 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?): BrowserRoot? {
         return BrowserRoot("root_id_001", null)
+    }
+
+
+    private fun handleIncomingActions(playbackAction: Intent) {
+        if (playbackAction.action == null) return
+
+        val actionString = playbackAction.action
+        val mediaController = mediaSession.controller
+        when {
+            actionString!!.equals(ACTION_PLAY, ignoreCase = true) ->  mediaController.transportControls.play()
+            actionString.equals(ACTION_PAUSE, ignoreCase = true) -> mediaController.transportControls.pause()
+            actionString.equals(ACTION_NEXT, ignoreCase = true) ->
+            {
+                val intent = Intent(MainActivity().SKIP_TO_NEXT)
+                intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                sendBroadcast(intent)
+            }
+            actionString.equals(ACTION_PREVIOUS, ignoreCase = true) -> {
+                val intent = Intent(MainActivity().SKIP_TO_PREVIOUS)
+                intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                sendBroadcast(intent)
+            }
+            actionString.equals(ACTION_STOP, ignoreCase = true) -> mediaController.transportControls.stop()
+        }
     }
 
     private class BecomingNoisyReceiver : BroadcastReceiver() {

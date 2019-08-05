@@ -2,6 +2,8 @@ package com.goose.player.controller
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.drawable.Drawable
 import android.media.MediaPlayer
 import android.net.Uri
@@ -14,6 +16,8 @@ import android.widget.SeekBar
 import com.bumptech.glide.Glide
 import com.goose.player.R
 import com.goose.player.entity.Song
+import com.goose.player.receivers.SkipToNextReceiver
+import com.goose.player.receivers.SkipToPreviousReceiver
 import com.goose.player.utils.StorageUtil.loadAudioIndex
 import com.goose.player.utils.StorageUtil.loadSongList
 import com.goose.player.utils.StorageUtil.storeSongIndex
@@ -32,7 +36,6 @@ class PlayerFragmentController(
     private val activity: Activity,
     private val view: View): SeekBar.OnSeekBarChangeListener, MediaControllerCompat.Callback() {
 
-    private var actualSong: Song? = null
     private var songList = ArrayList<Song>()
     private var executor: ScheduledExecutorService? = null
     private var seekBarPositionUpdateTask: Runnable? = null
@@ -67,6 +70,7 @@ class PlayerFragmentController(
         mediaController.registerCallback(this)
         player = MediaPlayer()
         myMediaController = MediaPlayerController(context, mediaController)
+        registerReceivers()
     }
 
     override fun onPlaybackStateChanged(state: PlaybackStateCompat) {
@@ -75,6 +79,7 @@ class PlayerFragmentController(
             state.state == PlaybackStateCompat.STATE_PLAYING -> onSongPlay()
             state.state == PlaybackStateCompat.STATE_PAUSED -> onSongPause()
             state.state == PlaybackStateCompat.STATE_BUFFERING -> onSongBuffering()
+            state.state == PlaybackStateCompat.STATE_STOPPED -> onSongStop()
         }
     }
 
@@ -174,6 +179,11 @@ class PlayerFragmentController(
     }
 
     private fun onSongPlay() {
+        if (!view.musicStateBtn.isEnabled){
+            view.musicStateBtn.isEnabled = true
+            view.nextBtn.isEnabled = true
+            view.prevBtn.isEnabled = true
+        }
         view.musicStateBtn.background = null
         view.musicStateBtn.background = pauseIc
         myMediaController.play()
@@ -186,6 +196,10 @@ class PlayerFragmentController(
         view.musicDurationSeekBar.max = metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION).toInt()
         myMediaController.playNewSong(metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI))
         mediaController.transportControls.play()
+    }
+
+    private fun onSongStop() {
+        myMediaController.pause()
     }
 
     private fun createSongInstanceFromMetadata(metadata: MediaMetadataCompat): Song {
@@ -206,10 +220,6 @@ class PlayerFragmentController(
         view.musicStateBtn.background = playIc
         myMediaController.pause()
         stopUpdatingCallbackWithPosition(false)
-    }
-
-    fun onSongRelease() {
-        stopUpdatingCallbackWithPosition(true)
     }
 
     private fun startUpdatingCallbackWithPosition() {
@@ -253,4 +263,26 @@ class PlayerFragmentController(
         super.onMetadataChanged(metadata)
         setSongDetails(createSongInstanceFromMetadata(metadata))
     }
+
+    private fun registerReceivers(){
+        context.registerReceiver(createSkipToNextReceiver(), IntentFilter(MainActivity().SKIP_TO_NEXT))
+        context.registerReceiver(createSkipToPrevReceiver(), IntentFilter(MainActivity().SKIP_TO_PREVIOUS))
+    }
+
+    private fun createSkipToNextReceiver(): SkipToNextReceiver {
+        return object : SkipToNextReceiver(){
+            override fun onReceive(context: Context, intent: Intent) {
+                onNextClick()
+            }
+        }
+    }
+
+    private fun createSkipToPrevReceiver(): SkipToPreviousReceiver {
+        return object : SkipToPreviousReceiver(){
+            override fun onReceive(context: Context, intent: Intent) {
+                onPreviousClick()
+            }
+        }
+    }
+
 }

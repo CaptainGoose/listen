@@ -39,9 +39,12 @@ class PlayerFragment : Fragment(), View.OnClickListener {
         checkPermissions()
         mediaController = MediaControllerCompat.getMediaController(activity as MainActivity)
         musicStateBtn.setOnClickListener(this)
-        showSongListBtn.setOnClickListener(this)
+        musicStateBtn.isEnabled = false
         nextBtn.setOnClickListener(this)
+        nextBtn.isEnabled = false
         prevBtn.setOnClickListener(this)
+        prevBtn.isEnabled = false
+        showSongListBtn.setOnClickListener(this)
         initFragmentController()
     }
 
